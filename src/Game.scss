@@ -2,7 +2,7 @@ $board-color: #000;
 $cell-color: #ccc;
 $grid-image: linear-gradient(#333 1px, transparent 1px),    linear-gradient(90deg, #333 1px, transparent 1px);
 $main-font: "Roboto Light", sans-serif;
-
+$font-size: 13px;
 
 * {
     font-family: $main-font;
@@ -27,6 +27,9 @@ $main-font: "Roboto Light", sans-serif;
         max-width: 450px;
         width: 100%;
         margin: 0 auto;
+        & legend {
+            font-size: $font-size;
+        }
         & fieldset {
             grid-column: 1/3;
             &:last-child {
