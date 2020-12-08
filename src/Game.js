@@ -1,196 +1,199 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './Game.scss';
 import Cell from "./Cell";
+import Controls from "./Controls";
 
-const CELL_SIZE = 10;
+const CELL_SIZE = 5;
+const ROWS_COUNT = 120;
+const COlS_COUNT = 170;
+const INTERVAL = 30;
 
-export default class Game extends React.Component {
-    constructor(props) {
-        super(props);
-        this.board = this.makeEmptyBoard();
-    }
+function Game() {
 
-    state = {
-        cells: [],
-        interval: 50,
-        rows: 50,
-        cols: 50,
-        isRunning: false,
-    };
+    const [rows, setRows] = useState(ROWS_COUNT);
+    const [cols, setCols] = useState(COlS_COUNT);
+    let [board, setBoard] = useState(makeEmptyBoard);
+    let [cells, setCells] = useState([]);
+    let [isRunning, setIsRunning] = useState(false);
+    let [timeOut, setTimeOut] = useState('');
+    let interval = INTERVAL;
+    let boardRef;
 
-    makeEmptyBoard() {
-        let board = [];
-        for (let y = 0; y < this.state.rows; y++) {
+    function makeEmptyBoard() {
+        const board = [];
+        for (let y = 0; y < rows; y++) {
             board[y] = [];
-            for (let x = 0; x < this.state.cols; x++) {
+            for (let x = 0; x < cols; x++) {
                 board[y][x] = false;
             }
         }
         return board;
+    }
+
+    const handleClearBoard = () => {
+        stopEvolution();
+        setBoard(
+            board = makeEmptyBoard()
+        );
+        setCells(
+            cells = createCells()
+        );
     };
 
-    getElementOffset() {
-        const rect = this.boardRef.getBoundingClientRect();
-        const doc = document.documentElement;
-
-        return {
-            x: (rect.left + window.pageXOffset) - doc.clientLeft,
-            y: (rect.top + window.pageYOffset) - doc.clientTop,
-        };
-    };
-
-    createCells() {
+    function createCells() {
         let cells = [];
-        for (let y = 0; y < this.state.rows; y++) {
-            for (let x = 0; x < this.state.cols; x++) {
-                if (this.board[y][x]) {
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                if (board[y][x]) {
                     cells.push({ x, y });
                 }
             }
         }
 
         return cells;
-    };
+    }
 
-    handleSelectCell = (evt) => {
-        const elemOffset = this.getElementOffset();
-        const offsetX = evt.clientX - elemOffset.x;
-        const offsetY = evt.clientY - elemOffset.y;
+    function calculateIteration() {
 
-        const x = Math.floor(offsetX / CELL_SIZE);
-        const y = Math.floor(offsetY / CELL_SIZE);
+        let newBoard = makeEmptyBoard();
 
-        if (x >= 0 && x <= this.state.cols && y >= 0 && y <= this.state.rows) {
-            this.board[y][x] = !this.board[y][x];
-        }
+        function findingNeighbors(board, x, y) {
+            let neighbors = 0;
+            const points = [[-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1], [0, -1]];
+            for (let i = 0; i < points.length; i++) {
+                const point = points[i];
 
-        this.setState({
-            cells: this.createCells()
-        });
-    };
+                let y1 = (y + point[0] + rows) % rows;
+                let x1 = (x + point[1] + cols) % cols;
 
-    startEvolution = () => {
-        this.setState({
-            isRunning: true
-        });
-        this.calculateIteration();
-    };
-
-    stopEvolution = () => {
-        this.setState({
-            isRunning: false
-        });
-        if (this.timeoutHandler) {
-            window.clearTimeout(this.timeoutHandler);
-            this.timeoutHandler = null;
-        }
-    };
-
-    findingNeighbors(board, x, y) {
-        let neighbors = 0;
-        const points = [[-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1], [0, -1]];
-        for (let i = 0; i < points.length; i++) {
-            const point = points[i];
-
-            let y1 = (y + point[0] + this.state.rows) % this.state.rows;
-            let x1 = (x + point[1] + this.state.cols) % this.state.cols;
-
-            if (x1 >= 0 && x1 < this.state.cols && y1 >= 0 && y1 < this.state.rows && board[y1][x1]) {
-                neighbors++;
+                if (x1 >= 0 && x1 < cols && y1 >= 0 && y1 < rows && board[y1][x1]) {
+                    neighbors++;
+                }
             }
+
+            return neighbors;
         }
 
-        return neighbors;
-    };
-
-    calculateIteration() {
-
-        let newBoard = this.makeEmptyBoard();
-
-        for (let y = 0; y < this.state.rows; y++) {
-            for (let x = 0; x < this.state.cols; x++) {
-                let neighbors = this.findingNeighbors(this.board, x, y);
-                if (this.board[y][x]) {
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                let neighbors = findingNeighbors(board, x, y);
+                if (board[y][x]) {
                     newBoard[y][x] = neighbors === 2 || neighbors === 3;
                 } else {
-                    if (!this.board[y][x] && neighbors === 3) {
+                    if (!board[y][x] && neighbors === 3) {
                         newBoard[y][x] = true;
                     }
                 }
             }
         }
 
-        this.board = newBoard;
-        this.setState({
-            cells: this.createCells()
-        });
+        setBoard(
+            board = newBoard
+        );
 
-        this.timeoutHandler = window.setTimeout(() => {
-            this.calculateIteration();
-        }, this.state.interval);
+        setCells(
+            cells = createCells()
+        );
+
+        setTimeOut(
+            timeOut = window.setTimeout(() => {
+                calculateIteration();
+            }, interval)
+        )
+    }
+
+     const startEvolution = () => {
+        setIsRunning(
+            isRunning = true
+        );
+        calculateIteration();
     };
 
-    handleClearBoard = () => {
-        this.stopEvolution();
-        this.board = this.makeEmptyBoard();
-        this.setState({
-            cells: this.createCells()
-        });
+    const stopEvolution = () => {
+        setIsRunning(
+            isRunning = false
+        );
+        if (timeOut) {
+            window.clearTimeout(timeOut);
+            setTimeOut(
+                timeOut = null
+            );
+        }
     };
 
-    handleRandom = () => {
-        this.handleClearBoard();
+     const handleRandom = () => {
+        handleClearBoard();
         setTimeout(() =>{
-            for (let y = 0; y < this.state.rows; y++) {
-                for (let x = 0; x < this.state.cols; x++) {
-                    this.board[y][x] = (Math.random() >= 0.5);
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    board[y][x] = (Math.random() >= 0.5);
                 }
             }
 
-            this.setState({
-                cells: this.createCells()
-            });
+            setCells(
+                cells = createCells()
+            );
         }, 100)
     };
 
-    render() {
-        const { cells, isRunning, rows, cols } = this.state;
-        return (
-            <div className="universe">
-                <h1>Conway's Game of Life</h1>
-                <div className="universe__controls">
-                    {isRunning ?
-                        <button onClick={this.stopEvolution}>Остановить эволюцию</button> :
-                        !cells.length ?
-                            <button disabled>Запустить эволюцию</button>:
-                            <button onClick={this.startEvolution}>Запустить эволюцию</button>
+     function getElementOffset() {
+        const rect = boardRef.getBoundingClientRect();
+        const doc = document.documentElement;
 
-                    }
-                    <button onClick={this.handleRandom}>Заполнить мир</button>
-                    <button onClick={this.handleClearBoard}>Очистить мир</button>
-                    <fieldset>
-                        <legend>Кол-во столбцов</legend>
-                        <button onClick={() => {this.handleClearBoard();this.setState({cols: cols - CELL_SIZE / 10})}}>-</button>
-                        <input value={cols} disabled/>
-                        <button onClick={() => {this.handleClearBoard();this.setState({cols: cols + CELL_SIZE / 10})}}>+</button>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Кол-во строк</legend>
-                        <button onClick={() => {this.handleClearBoard();this.setState({rows: rows - CELL_SIZE / 10})}}>-</button>
-                        <input value={rows} disabled/>
-                        <button onClick={() => {this.handleClearBoard();this.setState({rows: rows + CELL_SIZE / 10})}}>+</button>
-                    </fieldset>
-                </div>
-                <div className="universe__board"
-                     style={{ width: `${cols * CELL_SIZE}px`, height: `${rows * CELL_SIZE}px`, backgroundSize: `${CELL_SIZE}px ${CELL_SIZE}px`}}
-                     onClick={this.handleSelectCell}
-                     ref={(n) => { this.boardRef = n; }}>
-
-                    {cells.map(cell => (
-                        <Cell x={cell.x} y={cell.y} key={`${cell.x},${cell.y}`}/>
-                    ))}
-                </div>
-            </div>
-        );
+        return {
+            x: (rect.left + window.pageXOffset) - doc.clientLeft,
+            y: (rect.top + window.pageYOffset) - doc.clientTop,
+        };
     }
+
+     const handleSelectCell = (evt) => {
+        const elemOffset = getElementOffset();
+        const offsetX = evt.clientX - elemOffset.x;
+        const offsetY = evt.clientY - elemOffset.y;
+
+        const x = Math.floor(offsetX / CELL_SIZE);
+        const y = Math.floor(offsetY / CELL_SIZE);
+
+        if (x >= 0 && x <= cols && y >= 0 && y <= rows) {
+            board[y][x] = !board[y][x];
+        }
+
+        setCells(
+            cells = createCells()
+        );
+     };
+
+     const options = {
+         cellSize: CELL_SIZE,
+         cols: cols,
+         rows: rows,
+         cells: cells,
+         isRunning: isRunning,
+         start: startEvolution,
+         stop: stopEvolution,
+         random: handleRandom,
+         clear: handleClearBoard,
+         setCols: setCols,
+         setRows: setRows,
+     };
+
+     return(
+         <div className="universe">
+             <h1>Conway's Game of Life</h1>
+             <Controls options={options}/>
+             <div className="universe__board"
+                  style={{ width: `${cols * CELL_SIZE}px`, height: `${rows * CELL_SIZE}px`, backgroundSize: `${CELL_SIZE}px ${CELL_SIZE}px`}}
+                  onClick={handleSelectCell}
+                  ref={(n) => { boardRef = n; }}
+             >
+                 {cells.map(cell => (
+                     <Cell x={cell.x} y={cell.y} key={`${cell.x},${cell.y}`} cellSize={CELL_SIZE}/>
+                     ))
+                 }
+             </div>
+         </div>
+     )
 }
+
+
+export default Game;
